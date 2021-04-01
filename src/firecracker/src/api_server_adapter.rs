@@ -10,7 +10,7 @@ use std::{
 };
 
 use api_server::{ApiRequest, ApiResponse, ApiServer};
-use logger::{error, warn};
+use logger::{error, warn, ProcessTimeReporter};
 use mmds::MMDS;
 use polly::event_manager::{EventManager, Subscriber};
 use seccomp::BpfProgram;
@@ -126,8 +126,7 @@ pub(crate) fn run_with_api(
     config_json: Option<String>,
     bind_path: PathBuf,
     instance_info: InstanceInfo,
-    start_time_us: Option<u64>,
-    start_time_cpu_us: Option<u64>,
+    process_time_reporter: ProcessTimeReporter,
     boot_timer_enabled: bool,
     debugger_enabled: bool,
 ) {
@@ -160,12 +159,8 @@ pub(crate) fn run_with_api(
                 from_vmm,
                 to_vmm_event_fd,
             )
-            .bind_and_run(
-                bind_path,
-                start_time_us,
-                start_time_cpu_us,
-                api_seccomp_filter,
-            ) {
+            .bind_and_run(bind_path, process_time_reporter, api_seccomp_filter)
+            {
                 Ok(_) => (),
                 Err(api_server::Error::Io(inner)) => match inner.kind() {
                     std::io::ErrorKind::AddrInUse => panic!(
