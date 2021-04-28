@@ -200,7 +200,7 @@ impl VmResources {
                     .balloon
                     .get_config()
                     .map_err(|_| VmConfigError::InvalidVmState)?
-                    .amount_mb as usize
+                    .amount_mib as usize
         {
             return Err(VmConfigError::IncompatibleBalloonSize);
         }
@@ -247,7 +247,7 @@ impl VmResources {
     ) -> Result<BalloonConfigError> {
         // The balloon cannot have a target size greater than the size of
         // the guest memory.
-        if config.amount_mb as usize
+        if config.amount_mib as usize
             > self
                 .vm_config
                 .mem_size_mib
@@ -725,7 +725,7 @@ mod tests {
         json = format!(
             r#"{{
                     "balloon": {{
-                        "amount_mb": 0,
+                        "amount_mib": 0,
                         "deflate_on_oom": false,
                         "stats_polling_interval_s": 0
                     }},
@@ -821,7 +821,7 @@ mod tests {
         vm_resources.vm_config.mem_size_mib = Some(128);
         vm_resources
             .set_balloon_device(BalloonDeviceConfig {
-                amount_mb: 100,
+                amount_mib: 100,
                 deflate_on_oom: false,
                 stats_polling_interval_s: 0,
             })
@@ -851,7 +851,7 @@ mod tests {
             debugger: false,
         };
         let mut new_balloon_cfg = BalloonDeviceConfig {
-            amount_mb: 100,
+            amount_mib: 100,
             deflate_on_oom: false,
             stats_polling_interval_s: 0,
         };
@@ -861,7 +861,7 @@ mod tests {
             .unwrap();
 
         let actual_balloon_cfg = vm_resources.balloon.get_config().unwrap();
-        assert_eq!(actual_balloon_cfg.amount_mb, new_balloon_cfg.amount_mb);
+        assert_eq!(actual_balloon_cfg.amount_mib, new_balloon_cfg.amount_mib);
         assert_eq!(
             actual_balloon_cfg.deflate_on_oom,
             new_balloon_cfg.deflate_on_oom
@@ -882,7 +882,7 @@ mod tests {
             boot_timer: false,
             debugger: false,
         };
-        new_balloon_cfg.amount_mb = 256;
+        new_balloon_cfg.amount_mib = 256;
         assert!(vm_resources.set_balloon_device(new_balloon_cfg).is_err());
     }
 
