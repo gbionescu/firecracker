@@ -14,6 +14,7 @@ logger = { path = "../logger" }
 mmds = { path = "../mmds" }
 polly = { path = "../polly" }
 seccomp = { path = "../seccomp" }
+snapshot = { path = "../snapshot"}
 utils = { path = "../utils" }
 vmm = { path = "../vmm" }
 gdb_server = { path = "../gdb_server" }
