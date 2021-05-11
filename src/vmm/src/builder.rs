@@ -404,7 +404,7 @@ pub fn build_microvm_for_boot(
     // altogether is the desired behaviour.
     // Keep this as the last step before resuming vcpus.
     SeccompFilter::apply(
-        seccomp_filters
+        &seccomp_filters
             .remove("vmm")
             .ok_or_else(|| MissingSeccompFilters("vmm".to_string()))?,
     )
@@ -495,7 +495,7 @@ pub fn build_microvm_from_snapshot(
     // Load seccomp filters for the VMM thread.
     // Keep this as the last step of the building process.
     SeccompFilter::apply(
-        seccomp_filters
+        &seccomp_filters
             .remove("vmm")
             .ok_or_else(|| MissingSeccompFilters("vmm".to_string()))?,
     )

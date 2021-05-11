@@ -14,8 +14,7 @@ use crate::{
 use kvm_bindings::{KVM_SYSTEM_EVENT_RESET, KVM_SYSTEM_EVENT_SHUTDOWN};
 use kvm_ioctls::VcpuExit;
 use libc::{c_int, c_void, siginfo_t};
-use logger::{error, info, IncMetric, METRICS};
-use seccomp::{BpfProgram, SeccompFilter};
+use std::sync::Arc;
 #[cfg(not(test))]
 use std::sync::Barrier;
 #[cfg(test)]
@@ -28,6 +27,15 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender, TryRecvError},
     thread,
 };
+
+use crate::{
+    vmm_config::machine_config::CpuFeaturesTemplate, vstate::vm::Vm, FC_EXIT_CODE_GENERIC_ERROR,
+    FC_EXIT_CODE_OK,
+};
+use kvm_bindings::{KVM_SYSTEM_EVENT_RESET, KVM_SYSTEM_EVENT_SHUTDOWN};
+use kvm_ioctls::VcpuExit;
+use logger::{error, info, IncMetric, METRICS};
+use seccomp::{BpfProgram, BpfProgramRef, SeccompFilter};
 use utils::{
     errno,
     eventfd::EventFd,
@@ -255,7 +263,7 @@ impl Vcpu {
 
     /// Moves the vcpu to its own thread and constructs a VcpuHandle.
     /// The handle can be used to control the remote vcpu.
-    pub fn start_threaded(mut self, seccomp_filter: BpfProgram) -> Result<VcpuHandle> {
+    pub fn start_threaded(mut self, seccomp_filter: Arc<BpfProgram>) -> Result<VcpuHandle> {
         let event_sender = self.event_sender.take().expect("vCPU already started");
         let response_receiver = self.response_receiver.take().unwrap();
         let vcpu_thread = thread::Builder::new()
@@ -263,10 +271,11 @@ impl Vcpu {
             .spawn(move || {
                 // We don't need to install the signal block mask on VCPU threads since they inherit
                 // the one from the VMM thread.
+                let filter = &*seccomp_filter;
                 self.init_thread_local_data()
                     .expect("Cannot cleanly initialize vcpu TLS.");
 
-                self.run(seccomp_filter);
+                self.run(filter);
             })
             .map_err(Error::VcpuSpawn)?;
 
@@ -282,7 +291,7 @@ impl Vcpu {
     /// Runs the vCPU in KVM context in a loop. Handles KVM_EXITs then goes back in.
     /// Note that the state of the VCPU and associated VM must be setup first for this to do
     /// anything useful.
-    pub fn run(&mut self, seccomp_filter: BpfProgram) {
+    pub fn run(&mut self, seccomp_filter: BpfProgramRef) {
         // Load seccomp filters for this vCPU thread.
         // Execution panics if filters cannot be loaded, use --seccomp-level=0 if skipping filters
         // altogether is the desired behaviour.
@@ -1019,7 +1028,7 @@ mod tests {
             .try_into()
             .unwrap();
         let vcpu_handle = vcpu
-            .start_threaded(seccomp_filter)
+            .start_threaded(Arc::new(seccomp_filter))
             .expect("failed to start vcpu");
 
         (vcpu_handle, vcpu_exit_evt)
