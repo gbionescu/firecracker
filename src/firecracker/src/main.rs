@@ -292,12 +292,12 @@ fn main() {
             debugger_enabled,
         );
     } else {
-        let mut seccomp_filters: BpfThreadMap = seccomp_filters
+        let seccomp_filters: BpfThreadMap = seccomp_filters
             .into_iter()
             .filter(|(k, _)| k != "api")
             .collect();
         run_without_api(
-            &mut seccomp_filters,
+            &seccomp_filters,
             vmm_config_json,
             &instance_info,
             boot_timer_enabled,
@@ -370,7 +370,7 @@ fn print_snapshot_data_format(snapshot_path: &str) {
 
 // Configure and start a microVM as described by the command-line JSON.
 fn build_microvm_from_json(
-    seccomp_filters: &mut BpfThreadMap,
+    seccomp_filters: &BpfThreadMap,
     event_manager: &mut EventManager,
     config_json: String,
     instance_info: &InstanceInfo,
@@ -400,7 +400,7 @@ fn build_microvm_from_json(
 }
 
 fn run_without_api(
-    seccomp_filters: &mut BpfThreadMap,
+    seccomp_filters: &BpfThreadMap,
     config_json: Option<String>,
     instance_info: &InstanceInfo,
     bool_timer_enabled: bool,
