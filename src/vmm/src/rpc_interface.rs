@@ -1210,6 +1210,7 @@ mod tests {
         let req = VmmAction::SetMmdsConfiguration(MmdsConfig {
             ipv4_address: None,
             version: MmdsVersion::default(),
+            network_interfaces: Vec::new(),
         });
         check_preboot_request(req, |result, vm_res| {
             assert_eq!(result, Ok(VmmData::Empty));
@@ -1219,6 +1220,7 @@ mod tests {
         let req = VmmAction::SetMmdsConfiguration(MmdsConfig {
             ipv4_address: None,
             version: MmdsVersion::default(),
+            network_interfaces: Vec::new(),
         });
         check_preboot_request_err(
             req,
@@ -1618,6 +1620,7 @@ mod tests {
             VmmAction::SetMmdsConfiguration(MmdsConfig {
                 ipv4_address: None,
                 version: MmdsVersion::default(),
+                network_interfaces: Vec::new(),
             }),
             VmmActionError::OperationNotSupportedPostBoot,
         );
@@ -1704,6 +1707,7 @@ mod tests {
         let req = VmmAction::SetMmdsConfiguration(MmdsConfig {
             ipv4_address: None,
             version: MmdsVersion::default(),
+            network_interfaces: Vec::new(),
         });
         verify_load_snap_disallowed_after_boot_resources(req, "SetMmdsConfiguration");
     }
