@@ -441,7 +441,6 @@ mod tests {
             guest_mac: Some(MacAddr::parse_str("01:23:45:67:89:0a").unwrap()),
             rx_rate_limiter: Some(RateLimiterConfig::default()),
             tx_rate_limiter: Some(RateLimiterConfig::default()),
-            allow_mmds_requests: false,
         }
     }
 
@@ -772,8 +771,7 @@ mod tests {
                     "network-interfaces": [
                         {{
                             "iface_id": "netif",
-                            "host_dev_name": "hostname8",
-                            "allow_mmds_requests": true
+                            "host_dev_name": "hostname8"
                         }}
                     ],
                     "machine-config": {{
@@ -817,8 +815,7 @@ mod tests {
                     "network-interfaces": [
                         {{
                             "iface_id": "netif",
-                            "host_dev_name": "hostname9",
-                            "allow_mmds_requests": true
+                            "host_dev_name": "hostname9"
                         }}
                     ],
                     "machine-config": {{
