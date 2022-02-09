@@ -39,6 +39,7 @@ pub fn create_vmm(_kernel_image: Option<&str>, is_diff: bool) -> (Arc<Mutex<Vmm>
             &resources,
             &mut event_manager,
             &empty_seccomp_filters,
+            false,
         )
         .unwrap(),
         event_manager,

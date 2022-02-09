@@ -6,8 +6,6 @@ use std::net::{TcpListener, TcpStream};
 pub use arch;
 #[cfg(target_arch = "x86_64")]
 pub use arch::x86_64::regs::setup_sregs;
-#[cfg(target_arch = "x86_64")]
-pub use kernel::loader::elf::{Elf64_Phdr, PT_LOAD};
 pub use kvm_bindings;
 pub use kvm_ioctls::VcpuFd;
 pub use std::sync::mpsc::{Receiver, Sender};
@@ -52,7 +50,6 @@ fn wait_for_tcp(port: u16) -> DynResult<TcpStream> {
 pub fn run_gdb_server(
     vmm_gm: GuestMemoryMmap,
     entry_addr: GuestAddress,
-    e_phdrs: Vec<Elf64_Phdr>,
     vcpu_event_receiver: Receiver<DebugEvent>,
     vcpu_event_sender: Sender<DebugEvent>,
 ) -> DynResult<()> {
@@ -60,7 +57,6 @@ pub fn run_gdb_server(
         vmm_gm,
         vcpu_event_receiver,
         vcpu_event_sender,
-        e_phdrs,
         entry_addr,
     )?;
     // Setting this breakpoint guarantees that the first continue command issued

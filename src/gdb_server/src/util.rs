@@ -7,8 +7,6 @@ use vmm_sys_util::errno::Error;
 
 #[cfg(target_arch = "x86_64")]
 pub use arch::x86_64::regs::setup_sregs;
-#[cfg(target_arch = "x86_64")]
-pub use kernel::loader::elf::{Elf64_Phdr, PT_LOAD};
 
 use super::kvm_bindings::*;
 use super::{GuestAddress, GuestMemoryMmap, VcpuFd};
@@ -120,6 +118,10 @@ impl Display for DebuggerError {
                 f,
                 "A paging strategy that is not currently supported has been detected"
             ),
+            DebuggerError::PageNotFound => write!(
+                f,
+                "[GDB Server] Page not found"
+            )
         }
     }
 }
@@ -177,7 +179,6 @@ impl Debugger {
         addr: u64,
         guest_memory: &GuestMemoryMmap,
         guest_state: &FullVcpuState,
-        e_phdrs: &[Elf64_Phdr],
     ) -> Result<u64, DebuggerError> {
         let mut linear_addr = addr;
         let pt_level = Debugger::get_paging_strategy(&guest_state.special_regs);
@@ -200,16 +201,12 @@ impl Debugger {
         // Computing address of PML4 entry address
         paddr += (linear_addr & mask) >> movem;
 
-        let mut table_entry;
         // Retrieving PML4 entry
+        let mut table_entry: u64;
         if let Ok(e) = guest_memory.read_obj(GuestAddress(paddr)) {
             table_entry = e;
         } else {
             return Err(DebuggerError::MemoryError);
-        }
-
-        if Debugger::check_entry(table_entry, TABLE_ENTRY_RSVD_BITS[0]).is_err() {
-            return Debugger::fixup_pointer(addr, e_phdrs);
         }
 
         // There is one loop iteration for each page-table level (PDPT, PDT, PT);
@@ -218,9 +215,9 @@ impl Debugger {
         // we have to either keep track of the index in the TABLE_ENTRY_RSVD_BITS
         // array or create individual const symbols for each possible value or
         // const symbols for each index. We chose the first.
-        let mut rsvd_idx = 0;
+        //let mut rsvd_idx = 0;
         for i in 0..3 {
-            rsvd_idx = 2 * i + 1;
+            //rsvd_idx = 2 * i + 1;
 
             // Number of bits (9) and the shift value (9) for the part of the linear address
             // that is used in the computation of next level's entry address are both
@@ -243,7 +240,7 @@ impl Debugger {
                         // Final address
                         paddr = table_entry & PDPTE_PS_ENTRY_MASK;
                         paddr += linear_addr & LINEAR_ADDR_PDPTE_PS_MASK;
-                        rsvd_idx = 2 * i + 2;
+                        //rsvd_idx = 2 * i + 2;
                         break;
                     }
                 }
@@ -252,7 +249,7 @@ impl Debugger {
                         // Final address
                         paddr = table_entry & PDE_PS_ENTRY_MASK;
                         paddr += linear_addr & LINEAR_ADDR_PDE_PS_MASK;
-                        rsvd_idx = 2 * i + 2;
+                        //rsvd_idx = 2 * i + 2;
                         break;
                     }
                 }
@@ -266,15 +263,6 @@ impl Debugger {
                     return Err(DebuggerError::InvalidState);
                 }
             }
-            // After each page table iteration we check whether the current entry is valid.
-            // If that is not the case, we try saving the translation process by skipping
-            // the page tables altogether and using direct translation through offset subtraction.
-            if Debugger::check_entry(table_entry, TABLE_ENTRY_RSVD_BITS[rsvd_idx]).is_err() {
-                return Debugger::fixup_pointer(addr, e_phdrs);
-            }
-        }
-        if Debugger::check_entry(table_entry, TABLE_ENTRY_RSVD_BITS[rsvd_idx]).is_err() {
-            return Debugger::fixup_pointer(addr, e_phdrs);
         }
 
         Ok(paddr)
@@ -287,7 +275,7 @@ impl Debugger {
     /// See Table 4.1, Volume 3A in Intel Arch SW Developer's Manual.
     /// # Arguments
     ///
-    /// * `context` - special registers corresponding to the current state of the vCPU   
+    /// * `context` - special registers corresponding to the current state of the vCPU
     fn get_paging_strategy(context: &kvm_sregs) -> PagingType {
         let mut pt_level: PagingType = PagingType::NONE;
         // Paging enabled
@@ -324,28 +312,6 @@ impl Debugger {
         }
 
         Ok(())
-    }
-
-    /// Following the kernel strategy, during the early boot phase, before the notion
-    /// of virtual addresses has been put in place, we obtain the corresponding
-    /// physical address by subtracting the section offset.
-    ///
-    /// # Arguments
-    ///
-    /// * `addr`    - linear address for which a valid translation through the page table
-    ///             mechanism was not found
-    /// * `e_phdrs` - ELF program headers   
-    fn fixup_pointer(addr: u64, e_phdrs: &[Elf64_Phdr]) -> Result<u64, DebuggerError> {
-        for phdr in e_phdrs {
-            if (phdr.p_type & PT_LOAD) == 0 {
-                continue;
-            }
-            if (phdr.p_vaddr <= addr) && (phdr.p_vaddr + phdr.p_memsz > addr) {
-                return Ok(addr - phdr.p_vaddr + phdr.p_paddr);
-            }
-        }
-
-        Err(DebuggerError::InvalidLinearAddress)
     }
 }
 

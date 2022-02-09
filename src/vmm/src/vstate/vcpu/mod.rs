@@ -5,14 +5,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the THIRD-PARTY file.
 
-#[allow(unused_imports)]
-use crate::gdb_server::{DebugEvent, FullVcpuState};
-use crate::{
-    vmm_config::machine_config::CpuFeaturesTemplate, vstate::vm::Vm, FC_EXIT_CODE_GENERIC_ERROR,
-    FC_EXIT_CODE_OK,
-};
-use kvm_bindings::{KVM_SYSTEM_EVENT_RESET, KVM_SYSTEM_EVENT_SHUTDOWN};
-use kvm_ioctls::VcpuExit;
 use libc::{c_int, c_void, siginfo_t};
 #[cfg(test)]
 use std::sync::Mutex;
@@ -40,6 +32,8 @@ use utils::{
     signal::{register_signal_handler, sigrtmin, Killable},
     sm::StateMachine,
 };
+
+use crate::gdb_server::{DebugEvent, FullVcpuState};
 
 #[cfg(target_arch = "aarch64")]
 pub(crate) mod aarch64;
@@ -542,7 +536,7 @@ impl Vcpu {
                 },
                 // Either a breakpoint was reached or we are single-stepping
                 #[cfg(target_arch = "x86_64")]
-                VcpuExit::Debug => {
+                VcpuExit::Debug(_debug) => {
                     let regular_regs = self.kvm_vcpu.fd.get_regs().unwrap();
                     let special_regs = self.kvm_vcpu.fd.get_sregs().unwrap();
                     // For now we don't differentiate between a kvm exit caused

@@ -265,6 +265,7 @@ impl<'a> PrebootApiController<'a> {
         recv_req: F,
         respond: G,
         boot_timer_enabled: bool,
+        debugger_enabled: bool,
     ) -> result::Result<(VmResources, Arc<Mutex<Vmm>>), ExitCode>
     where
         F: Fn() -> VmmAction,
@@ -277,6 +278,7 @@ impl<'a> PrebootApiController<'a> {
         #[allow(clippy::field_reassign_with_default)]
         {
             vm_resources.boot_timer = boot_timer_enabled;
+            vm_resources.debugger = debugger_enabled;
         }
         let mut preboot_controller = PrebootApiController::new(
             seccomp_filters,
@@ -419,6 +421,7 @@ impl<'a> PrebootApiController<'a> {
             &self.vm_resources,
             &mut self.event_manager,
             self.seccomp_filters,
+            self.vm_resources.debugger,
         )
         .map(|vmm| {
             self.built_vmm = Some(vmm);
@@ -982,6 +985,7 @@ mod tests {
         _: &VmResources,
         _: &mut EventManager,
         _: &BpfThreadMap,
+        _: bool,
     ) -> Result<Arc<Mutex<Vmm>>, StartMicrovmError> {
         Ok(Arc::new(Mutex::new(MockVmm::default())))
     }

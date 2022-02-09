@@ -4,7 +4,6 @@ pub use arch::x86_64::regs::setup_sregs;
 use crate::vm_memory::Bytes;
 
 use super::{GuestAddress, GuestMemoryMmap};
-use super::kvm_bindings::*;
 use super::{FullVcpuState, DebuggerError};
 
 // If 1, enable paging and use the § CR3 register, else disable paging.
@@ -13,11 +12,11 @@ const CR0_PG_MASK: u64 = 1 << 31;
 // 4 level paging - Enabling PAE (by setting bit 5, PAE, of the system register CR4)
 // If set, changes page table layout to translate 32-bit virtual addresses into extended 36-bit
 // physical addresses.
-const CR4_PAE_MASK: u64 = 1 << 5;
+//const CR4_PAE_MASK: u64 = 1 << 5;
 
 // 5 level paging - Likewise, the new extension is enabled by setting bit 12 of the CR4 register
 // (known as LA57). If the bit is not set, the processor operates with four paging levels.
-const CR4_LA57_MASK: u64 = 1 << 12;
+//const CR4_LA57_MASK: u64 = 1 << 12;
 
 // Long mode Active
 // when BIT 10 of Extended Feature Enable Register (EFER) register is set,

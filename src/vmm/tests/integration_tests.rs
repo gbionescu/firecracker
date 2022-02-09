@@ -49,6 +49,7 @@ fn test_build_microvm() {
             &resources,
             &mut event_manager,
             &mut empty_seccomp_filters,
+            false
         );
         assert_eq!(format!("{:?}", vmm_ret.err()), "Some(MissingKernelConfig)");
     }

@@ -8,9 +8,6 @@ use gdbstub::{arch, Actions, BreakOp, StopReason, Target, Tid, SINGLE_THREAD_TID
 use super::{Bytes, GuestAddress, GuestMemoryMmap};
 use super::{DebugEvent, Debugger, DebuggerError, FullVcpuState, Receiver, ResumeAction, Sender};
 use crate::DynResult;
-#[cfg(target_arch = "x86_64")]
-pub use kernel::loader::elf::Elf64_Phdr;
-
 use super::{Walker};
 
 pub struct FirecrackerGDBServer {
@@ -29,9 +26,6 @@ pub struct FirecrackerGDBServer {
     // "cache" is also properly updated
     pub guest_state: FullVcpuState,
     pub single_step_en: bool,
-
-    #[cfg(target_arch = "x86_64")]
-    pub e_phdrs: Vec<Elf64_Phdr>,
     pub entry_addr: GuestAddress,
 }
 
@@ -41,7 +35,6 @@ impl FirecrackerGDBServer {
         guest_memory: GuestMemoryMmap,
         vcpu_event_receiver: Receiver<DebugEvent>,
         vcpu_event_sender: Sender<DebugEvent>,
-        e_phdrs: Vec<Elf64_Phdr>,
         entry_addr: GuestAddress,
     ) -> DynResult<FirecrackerGDBServer> {
         Ok(FirecrackerGDBServer {
@@ -52,7 +45,6 @@ impl FirecrackerGDBServer {
             breakpoints_phys: HashMap::new(),
             guest_state: Default::default(),
             single_step_en: false,
-            e_phdrs,
             entry_addr,
         })
     }
@@ -119,7 +111,6 @@ impl FirecrackerGDBServer {
                 linear_addr,
                 &self.guest_memory,
                 &self.guest_state,
-                &self.e_phdrs,
             ) {
                 Ok(addr) => {
                     phys_addr = addr;
@@ -243,7 +234,6 @@ impl Target for FirecrackerGDBServer {
                                         self.guest_state.regular_regs.rip,
                                         &self.guest_memory,
                                         &self.guest_state,
-                                        &self.e_phdrs,
                                     ) {
                                         Ok(phys_addr) => {
                                             if let Err(e) = self.remove_bp(
@@ -298,7 +288,6 @@ impl Target for FirecrackerGDBServer {
                                 prev_rip,
                                 &self.guest_memory,
                                 &self.guest_state,
-                                &self.e_phdrs,
                             ) {
                                 Ok(phys_addr) => {
                                     if let Err(e) = self.remove_bp(prev_rip, Some(phys_addr)) {
@@ -389,13 +378,13 @@ impl Target for FirecrackerGDBServer {
     /// Function that is called when the user or the GDB client requests a number of val.len
     /// bytes from the guest memory at address 'addrs'
     fn read_addrs(&mut self, addrs: u64, val: &mut [u8]) -> Result<bool, Self::Error> {
-        if let Ok(phy_addr) = Debugger::virt_to_phys(addrs, &self.guest_memory, &self.guest_state, &self.e_phdrs) {
+        if let Ok(phy_addr) = Debugger::virt_to_phys(addrs, &self.guest_memory, &self.guest_state) {
             let (paddr, psize) = Walker::virt_to_phys(addrs, &self.guest_memory, &self.guest_state)?;
             eprintln!("{} {} {} ", phy_addr, paddr, psize);
         }
 
         if let Ok(phys_addr) =
-            Debugger::virt_to_phys(addrs, &self.guest_memory, &self.guest_state, &self.e_phdrs)
+            Debugger::virt_to_phys(addrs, &self.guest_memory, &self.guest_state)
         {
             for (i, item) in val.iter_mut().enumerate() {
                 if let Ok(byte) = self

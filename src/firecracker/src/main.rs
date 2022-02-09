@@ -206,6 +206,11 @@ fn main_exitable() -> ExitCode {
             Argument::new("http-api-max-payload-size")
                 .takes_value(true)
                 .help("Http API request payload max size.")
+        )
+        .arg(
+            Argument::new("debugger")
+                .takes_value(false)
+                .help("Whether or not to launch the guest microvm under GDB")
         );
 
     let arguments = match arg_parser.parse_from_cmdline() {
@@ -358,6 +363,7 @@ fn main_exitable() -> ExitCode {
             process_time_reporter,
             boot_timer_enabled,
             payload_limit,
+            debugger_enabled,
         )
     } else {
         let seccomp_filters: BpfThreadMap = seccomp_filters
@@ -369,6 +375,7 @@ fn main_exitable() -> ExitCode {
             vmm_config_json,
             instance_info,
             boot_timer_enabled,
+            debugger_enabled,
         )
     }
 }
@@ -449,6 +456,7 @@ fn build_microvm_from_json(
     config_json: String,
     instance_info: InstanceInfo,
     boot_timer_enabled: bool,
+    debugger_enabled: bool,
 ) -> std::result::Result<(VmResources, Arc<Mutex<vmm::Vmm>>), ExitCode> {
     let mut vm_resources = VmResources::from_json(&config_json, &instance_info).map_err(|err| {
         error!("Configuration for VMM from one single json failed: {}", err);
@@ -460,6 +468,7 @@ fn build_microvm_from_json(
         &vm_resources,
         event_manager,
         seccomp_filters,
+        debugger_enabled
     )
     .map_err(|err| {
         error!(
@@ -478,6 +487,7 @@ fn run_without_api(
     config_json: Option<String>,
     instance_info: InstanceInfo,
     bool_timer_enabled: bool,
+    debugger_enabled: bool,
 ) -> ExitCode {
     let mut event_manager = EventManager::new().expect("Unable to create EventManager");
 
@@ -493,6 +503,7 @@ fn run_without_api(
         config_json.unwrap(),
         instance_info,
         bool_timer_enabled,
+        debugger_enabled
     ) {
         Ok((res, vmm)) => (res, vmm),
         Err(exit_code) => return exit_code,

@@ -73,6 +73,9 @@ pub type EventManager = BaseEventManager<Arc<Mutex<dyn MutEventSubscriber>>>;
 
 /// Vmm exit-code type.
 pub type ExitCode = i32;
+
+pub use gdb_server;
+
 /// Success exit code.
 pub const FC_EXIT_CODE_OK: ExitCode = 0;
 /// Generic error exit code.
